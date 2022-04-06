@@ -26,6 +26,9 @@ namespace Parsing
         public int pages; //отдельная переменная, которая нужна для проверки завершения работы потоков
         private async void button1_Click(object sender, EventArgs e)
         {
+            textBox1.Enabled = false;
+            textBox2.Enabled = false;
+            button1.Enabled = false;
             MainUrl = textBox1.Text;
             locker = new object();
             var config = Configuration.Default.WithDefaultLoader();
