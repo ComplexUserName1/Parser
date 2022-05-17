@@ -29,8 +29,10 @@ namespace Parsing
             textBox1.Enabled = false;
             textBox2.Enabled = false;
             button1.Enabled = false;
+
             MainUrl = textBox1.Text;
             locker = new object();
+
             var config = Configuration.Default.WithDefaultLoader();
             var context = BrowsingContext.New(config);
             var doc = await context.OpenAsync(MainUrl); //подгружаем сайт, с которого нам нужны данные(без JS скриптов)
@@ -67,30 +69,38 @@ namespace Parsing
             var config = Configuration.Default.WithDefaultLoader();
             var context = BrowsingContext.New(config);
             var doc = await context.OpenAsync(Convert.ToString(obj));
+
             lock (locker) //блокируем проход другим потокам, кроме главного. как только монополизирующий поток закончит свои действия, другой поток сможет приступить к выполнению этих действий.
             {
+
                 var docs = new List<Task<IDocument>>();
                 Toys[] toys1 = new Toys[Convert.ToInt32(doc.GetElementsByClassName("show-by")[0].GetElementsByClassName("item active")[0].QuerySelector("a").TextContent.Trim())]; //создаём массив структур.(всего структур = количеству товаров)
                 var ToysUrl = doc.GetElementsByClassName("row mt-2")[0].GetElementsByClassName("col-12 col-sm-6 col-md-6 col-lg-4 col-xl-4 my-2"); //вытаскиваем ссылки на все товары
+
                 for (int i = 0; i <= ToysUrl.Length - 1; i++)
                 {
                     toys1[i].toy_href = ToysUrl[i].QuerySelector("meta").GetAttribute("content"); //заполняем ссылку на товар в элемент структуры
                     docs.Add(context.OpenAsync(ToysUrl[i].QuerySelector("meta").GetAttribute("content"))); //подготавливаем массив документов, чтобы потом подгрузить их вытаскивать нужные нам данные из каждого товара
                 }
+
                 Task.WaitAll(docs.ToArray()); //подгружаем страницу с каждым товаром
                 StructBuilder(toys1, docs); //заполняем структуру с данными каждого товара данной страницы
                 WriteToCSVFile(toys1, ToysUrl); //записываем всё в файл
+
                 listBox1.Invoke(new Action(() => listBox1.Items.Add("Поток закончил свою работу"))); //добавляем в листбокс элемент для проверки окончания работы всех потоков
+
                 if (listBox1.Items.Count == pages)
                 {
                     MessageBox.Show("Парсинг завершён", "Внимание"); //выводим сообщение об окончании работы программы
                     Application.Exit(); //выходим из программы
                 }
+
             }
         }
         public void WriteToCSVFile(Toys[] toys1, IHtmlCollection<IElement> ToysUrl)
         {
             StringBuilder ResultStringForCSV = new StringBuilder(); //подготавливаем стрингбилдер. именно с помощью него мы собираем строку с нужными нам данными в нужном для записи в файл формате.
+
             for (int j = 0; j <= ToysUrl.Length - 1; j++)
             {
                 ResultStringForCSV.AppendLine(toys1[j].region + ";" + toys1[j].breadcrumbs + ";" + toys1[j].detail_name + ";" + toys1[j].price + ";" + toys1[j].old_price + ";" + toys1[j].ok + ";" + toys1[j].images_hrefs + toys1[j].toy_href); //собираем строку с данными товара
@@ -98,17 +108,22 @@ namespace Parsing
                 File.AppendAllText(GlobalPath, ResultStringForCSV.ToString(), Encoding.GetEncoding(1251)); //записываем данные в файл.(если файла изначально нет, то он его создаст)
                 ResultStringForCSV.Clear(); //отчищаем стрингбилдер, чтобы данные не дублировались.
             }
+
         }
         public void StructBuilder(Toys[] toys1, List<Task<IDocument>> docs)
         {
+
             var j = 0;
+
             foreach (var t in docs)
             {
                 var res = t.Result;
+
                 toys1[j].region = res.GetElementsByClassName("d-none d-md-block top-line")[0].GetElementsByClassName("col-12 select-city-link")[0].QuerySelector("a").TextContent.Trim(); //заполняем данные о выбранном регионе
                 toys1[j].breadcrumbs = res.GetElementsByClassName("breadcrumb")[0].TextContent.Trim(); //заполняем данные о хлебных крошках
                 toys1[j].detail_name = res.GetElementsByClassName("detail-name")[0].TextContent.Trim(); //заполняем данные об полном имени товара
                 toys1[j].price = res.GetElementsByClassName("price")[0].TextContent.Trim(); //заполняем данные о цене товара
+
                 try
                 {
                     toys1[j].old_price = res.GetElementsByClassName("old-price")[0].TextContent.Trim(); //заполняем данные о старой цене товара
@@ -117,6 +132,7 @@ namespace Parsing
                 {
                     toys1[j].old_price = "Нет старой цены";
                 }
+
                 try
                 {
                     toys1[j].ok = res.GetElementsByClassName("ok")[0].TextContent.Trim(); //заполняем данные о наличии товара(не совсем понял зачем это надо, так как у них на сайте если товара нет в наличии, то он просто не отображается у пользователя)
@@ -125,10 +141,12 @@ namespace Parsing
                 {
                     toys1[j].ok = "Товара нет в наличии";
                 }
+
                 for (int f = 0; f <= res.GetElementsByClassName("card-slider-nav")[0].QuerySelectorAll("img").Length - 1; f++)
                 {
                     toys1[j].images_hrefs += res.GetElementsByClassName("card-slider-nav")[0].QuerySelectorAll("img")[f].GetAttribute("src") + ";"; //собираем строку с ссылками на картинки товара
                 }
+
                 j = j + 1;
                 res.Dispose(); //освобождаем ресурсы
             }

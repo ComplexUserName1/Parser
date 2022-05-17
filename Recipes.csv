@@ -1,0 +1,8 @@
+Water(Hot) + ;Tea_Bag(Warm) = ;Tea(Warm)
+Tea(Warm) + ;Cube_of_Sugar(Warm) = ;Sweet_Tea(Warm)
+Cherry(Warm) + ;Water(Hot) = ;Strength_potion(Warm)
+Lime(Warm) + ;Water(Warm) = ;Agility_potion(Warm)
+Blueberry(Warm) + ;Water(Cold) = ;Intelligence_potion(Warm)
+Strength_potion + ;DragonFruit = ;Enhanced_Strength_potion
+Agility_potion + ;DragonFruit = ;Enhanced_Agility_potion
+Intelligence_potion + ;DragonFruit = ;Enhanced_Intelligence_potion
